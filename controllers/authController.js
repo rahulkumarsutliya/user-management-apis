@@ -5,7 +5,7 @@ const verifyGoogleToken = require('../utils/googleAuth');
 
 
 //send otp to identifier(mobile or email)
-exports.sendOtp = async (req, resp) => {
+exports.login = async (req, resp) => {
     const { identifier } = req.body;
     try {
         if(!identifier){
@@ -34,11 +34,11 @@ exports.sendOtp = async (req, resp) => {
 };
 
 //verify otp / login
-exports.verifyOtp = async (req, resp) => {
+exports.verifyOtp = async (req, res) => {
     const { identifier, otp } = req.body;
     try {
         if(!identifier){
-            return resp.status(401).send({message : "Fields cannot be empty"});
+            return res.status(401).send({message : "Fields cannot be empty"});
         }
         const user = await User.findOne({
             $or: [{ email: identifier }, { mobile: identifier }],
@@ -46,7 +46,7 @@ exports.verifyOtp = async (req, resp) => {
             otpExpires: { $gt: new Date() }
         });
 
-        if (!user) return resp.status(400).send({ message: 'Invalid or expired OTP' });
+        if (!user) return res.status(400).send({ message: 'Invalid or expired OTP' });
 
         user.otp = undefined;
         user.otpExpires = undefined;
@@ -54,22 +54,23 @@ exports.verifyOtp = async (req, resp) => {
         await user.save();
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET,{expiresIn:process.env.JWT_EXPIRES});
-        resp.status(200).send({message:"OTP verified successfully",data:{token, user} });
+        res.status(200).send({message:"OTP verified successfully",data:{token, user} });
     } catch (err) {
-        resp.status(500).send({ message: err.message || "Something went wrong" });
+        res.status(500).send({ message: err.message || "Something went wrong" });
     }
 };
 
 //resend otp
-exports.resendOtp = async (req, resp) => {
+exports.resendOtp = async (req, res) => {
     const { identifier } = req.body;
     try{
         if(!identifier){
-            return resp.status(401).send({message: "Fill Value into the Field"});
+            return res.status(401).send({message: "Fill Value into the Field"});
         }
     const user = await User.findOne({ $or: [{ email: identifier }, { mobile: identifier }] });
 
-    if (!user) return resp.status(404).json({ message: 'User not found' });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
@@ -79,20 +80,20 @@ exports.resendOtp = async (req, resp) => {
     await user.save();
 
     sendOtp(identifier, otp);
-    resp.status(200).send({ message: 'OTP resent' });
+    res.status(200).send({ message: 'OTP resent' });
     }catch(err){
-        resp.status(500).send({message:err.message || "Something went wrong"});
+        res.status(500).send({message:err.message || "Something went wrong"});
     };
 };
 
 //google sign-in
-exports.googleSignIn = async(req,resp)=>{
+exports.googleSignIn = async(req,res)=>{
     try{
         const {token} = req.body;
         const googleUser = await verifyGoogleToken(token);
 
         if(!token){
-            return resp.status(401).send({message: "Please provide token"});
+            return res.status(401).send({message: "Please provide token"});
         }
 
         let user = await User.findOne({email : googleUser.email});
@@ -110,8 +111,8 @@ exports.googleSignIn = async(req,resp)=>{
         const authToken = jwt.sign({id:user._id},process.env.JWT_SECRET,{expiresIn:process.env.JWT_EXPIRES});
         
          
-        resp.status(200).send({message : "User Login Successfully",data:{token:authToken,user}});
+        res.status(200).send({message : "User Login Successfully",data:{token:authToken,user}});
     }catch(err){
-        resp.status(500).send({message:err.message || "Server Error"});
+        res.status(500).send({message:err.message || "Server Error"});
     }
 };

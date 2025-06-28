@@ -4,9 +4,9 @@ const protect = require('../middlewares/authMiddleware');
 const {addAddress,getAddress,updateAddress,setDefaultAddress} = require('../controllers/addressController');
 
 
-router.post('/',protect,addAddress);
-router.get('/',protect,getAddress);
-router.put('/',protect,updateAddress);
+router.post('/add',protect,addAddress);
+router.get('/fetch',protect,getAddress);
+router.put('/update',protect,updateAddress);
 router.put('/default',protect,setDefaultAddress);
 
 module.exports = router;
